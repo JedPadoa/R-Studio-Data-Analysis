@@ -1,0 +1,112 @@
+---
+title: "Final Project Analysis"
+author: "Jed Padoa"
+date: "7/14/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(dplyr)
+library(tidyr)
+library(rvest)
+```
+
+```{r, message = F}
+POR = read_csv("student-por.csv")
+MAT = read_csv("student-mat.csv")
+
+MERGE2 = merge(MAT, POR, by = c("school", "sex", "age", "address", "famsize", "Pstatus", "Medu", "Fedu", "Mjob", "Fjob", "reason", "nursery", "internet"), all = TRUE)
+
+MERGE2 <- filter(MERGE2, freetime.x == freetime.y & traveltime.x == traveltime.y & guardian.x == guardian.y & health.x == health.y)
+```
+
+```{r}
+
+#creating table of alcohol consumption level and final grade for Portuguese class
+#----------------------------------------------------
+
+POR$Dalc <- factor(POR$Dalc)
+
+por_dalc <- select(POR, Dalc, G3)
+
+one = filter(por_dalc, Dalc == "1")
+two = filter(por_dalc, Dalc == "2")
+three = filter(por_dalc, Dalc == "3")
+four = filter(por_dalc, Dalc == "4")
+five = filter(por_dalc, Dalc == "5")
+
+aveone = median(one[["G3"]])
+ave2 = median(two[["G3"]])
+ave3 = median(three[["G3"]])
+ave4 = median(four[["G3"]])
+ave5 = median(five[["G3"]])
+
+por_averages <- tribble(
+  ~level, ~median, ~class,
+  #--|--|--|
+  "1", aveone, "POR",
+  "2", ave2, "POR",
+  "3", ave3, "POR",
+  "4", ave4, "POR",
+  "5", ave5, "POR"
+)
+
+#creating table of alcohol consumption level and final grade for Math class
+#----------------------------------------------------
+
+MAT$Dalc <- factor(MAT$Dalc)
+
+mat_dalc <- select(MAT, Dalc, G3)
+
+onemat = filter(mat_dalc, Dalc == "1")
+twomat = filter(mat_dalc, Dalc == "2")
+threemat = filter(mat_dalc, Dalc == "3")
+fourmat = filter(mat_dalc, Dalc == "4")
+fivemat = filter(mat_dalc, Dalc == "5")
+
+ave1mat = median(onemat[["G3"]])
+ave2mat = median(twomat[["G3"]])
+ave3mat = median(threemat[["G3"]])
+ave4mat = median(fourmat[["G3"]])
+ave5mat = median(fivemat[["G3"]])
+
+mat_averages <- tribble(
+  ~level, ~median, ~class,
+  #--|--|
+  "1", ave1mat, "MAT",
+  "2", ave2mat, "MAT",
+  "3", ave3mat, "MAT",
+  "4", ave4mat, "MAT",
+  "5", ave5mat, "MAT"
+)
+
+#Merging the two sets--------------------------------
+
+merged_averages <- full_join(por_averages, mat_averages, by = c("level", "median", "class"))
+
+#Creating facet wrap plot----------------------------
+
+ggplot(data = merged_averages) + geom_col(aes(x = level, y = median, fill = class), show.legend = FALSE) + facet_wrap(class~.) + xlab("Alcohol Consumption Level (1 = Very Low, 5 = Very High)") + ylab("Median Final Grade (Out of 20)") + ggtitle(label = "Effect of Alcohol Consumption on the Performance of Students in Math Class vs Portuguese Language Class") + theme(plot.title = element_text(size = 9, color = "indianred3"))
+
+```
+
+
+```{r}
+#creating dataset that includes only students that took both classes
+
+MERGE = merge(MAT, POR, by = c("school", "sex", "age", "address", "famsize", "Pstatus", "Medu", "Fedu", "Mjob", "Fjob", "reason", "nursery", "internet"))
+
+#adding variable that represents the average grade for the student among both classes
+
+both <- mutate(MERGE, averageFinal = (G3.x + G3.y) / 2)
+
+#creating boxplot
+
+both$famrel.x <- factor(both$famrel.x)
+both$famrel.y <- factor(both$famrel.y)
+
+ggplot(data = both, aes(x = famrel.x, y = averageFinal, fill = famrel.x)) + geom_boxplot(show.legend = FALSE) + labs(title = "Effect of Family Relationship Quality on Student Performance", y = "Average Final Grade", x = "Quality of Family Relationships (1 = Very Bad, 5 = Excellent)") + theme(plot.title = element_text(color = "cyan4"))
+```
+
